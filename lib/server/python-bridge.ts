@@ -1,12 +1,9 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { runCommand } from './run-command'
 
 const bridgeScript = path.join(process.cwd(), 'python', 'analyze_quality.py')
-const bundledPython = path.join(process.cwd(), 'python', 'runtime', 'python.exe')
-const bridgeExecutable = path.join(process.cwd(), 'python', 'analyze_quality', 'analyze_quality.exe')
 
 export async function runPythonAnalysis(payload: Record<string, unknown>) {
   const tempDir = path.join(os.tmpdir(), 'for-q-analysis')
@@ -19,29 +16,8 @@ export async function runPythonAnalysis(payload: Record<string, unknown>) {
   try {
     await writeFile(inputPath, JSON.stringify(payload), 'utf8')
 
-    const configuredExecutable = process.env.FORQ_ANALYZE_EXECUTABLE?.trim()
-    const candidates = []
-    if (configuredExecutable) {
-      candidates.push({
-        command: configuredExecutable,
-        args: ['--input', inputPath, '--output', outputPath],
-      })
-    }
-    if (existsSync(bundledPython)) {
-      candidates.push({
-        command: bundledPython,
-        args: [bridgeScript, '--input', inputPath, '--output', outputPath],
-      })
-    }
-    if (existsSync(bridgeExecutable)) {
-      candidates.push({
-        command: bridgeExecutable,
-        args: ['--input', inputPath, '--output', outputPath],
-      })
-    }
     await runCommand(
       [
-        ...candidates,
         { command: 'py', args: ['-3', bridgeScript, '--input', inputPath, '--output', outputPath] },
         { command: 'python', args: [bridgeScript, '--input', inputPath, '--output', outputPath] },
         { command: 'python3', args: [bridgeScript, '--input', inputPath, '--output', outputPath] },
